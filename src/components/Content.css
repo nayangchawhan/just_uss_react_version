@@ -1,0 +1,49 @@
+.content{
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+    max-width: 800px;
+    text-align: justify;
+}
+
+.content h1{
+    font-size: 24px;
+    font-family: "poppins", sans-serif;
+}
+
+.content p{
+    font-size: 16px;
+    font-family: "poppins", sans-serif;
+    line-height: 1.6;
+}
+
+.content .content__features ul{
+    list-style-type: disc;
+    padding-left: 20px;
+    font-family: "poppins", sans-serif;
+}
+
+.content .content-button{
+    background-color: #c1c1c1;
+    color: rgb(0, 0, 0);
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 5px;
+    justify-content: center;
+    justify-items: center;
+    align-items: center;
+    margin-left: 40%;
+}
+
+.content-button_div{
+    justify-content: center;
+    align-items: center;
+}

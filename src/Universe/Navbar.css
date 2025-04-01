@@ -1,0 +1,26 @@
+.sidebar{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 12%;
+    height: 100%;
+    background-color: #000000;
+    color: rgb(255, 255, 255);
+    padding: 20px;
+    border-right: .5px solid #ccc;
+}
+
+.sidebar h1{
+    font-size: 45px;
+    font-family: "Just Another Hand", cursive;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.sidebar li{
+    list-style-type: none;
+    margin: 10px 0;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    text-align: left;
+}

@@ -1,0 +1,29 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.header{
+    background-color: #000000;
+    text-align: center;
+    color: white;
+}
+
+.header h1{
+    font-size: 180px;
+    font-family: "Just Another Hand", cursive;
+}
+
+.header h5{
+    font-size: 50px;
+    font-family: "Poppins", sans-serif;
+    font-weight: 100;
+}
+
+.ai_footer{
+    height: 5px;
+    margin: 0;
+    margin-bottom: 0px;
+    background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+}

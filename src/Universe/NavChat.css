@@ -1,0 +1,30 @@
+.chat {
+    padding: 20px;
+}
+
+.chat h1{
+    font-family: 'Just Another Hand', cursive;
+}
+
+.chat input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.chat-list {
+    max-height: 400px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+.chat-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.chat-item p {
+    margin: 0;
+}
