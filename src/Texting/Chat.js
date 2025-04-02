@@ -4,6 +4,7 @@ import { ref, onValue, push } from 'firebase/database';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import NavChat from '../Universe/NavChat';
 import { IoSend } from "react-icons/io5";
+import { FaCamera } from "react-icons/fa6";
 import { FaImage } from "react-icons/fa"; // Icon for image upload
 import './Chat.css';
 
@@ -110,13 +111,13 @@ function Chat() {
             <NavChat onUserSelect={setSelectedChat} />
             <div className="chat-container" style={{ width: '70%', padding: '10px', display: 'flex', flexDirection: 'column' }}>
                 <div className="chat-header" style={{ padding: '10px', borderBottom: '1px solid #ccc', fontFamily: "Poppins" }}>
-                    {selectedChat ? <h3>Chat with {selectedChat.username}</h3> : <h3>Select a chat to start messaging</h3>}
+                    {selectedChat ? <h3>Chating with {selectedChat.username}</h3> : <h3>Select a chat to start messaging</h3>}
                 </div>
                 <div className="messages" style={{ flex: 1, overflowY: 'scroll', padding: '10px' }}>
                     {messages.map((msg, index) => (
                         <div key={index} style={{ padding: '5px', borderBottom: '1px solid #ccc', fontFamily: "Poppins" }}>
-                            <strong>{msg.senderName}</strong>: 
-                            {msg.text && <p>{msg.text}</p>}
+                            <strong >{msg.senderName}</strong>: 
+                            {msg.text && <p style={{whiteSpace:'pre-wrap'}}>{msg.text}</p>}
                             {msg.imageUrl && <img src={msg.imageUrl} alt="sent" style={{ maxWidth: '200px', borderRadius: '10px' }} />}
                             <span style={{ fontSize: '0.8em', color: '#888', marginLeft: '10px' }}>
                                 {new Date(msg.timestamp).toLocaleTimeString()}
@@ -132,7 +133,7 @@ function Chat() {
                 )}
                 <div className="message-input" style={{ display: 'flex', padding: '10px', alignItems: 'center' }}>
                     <label htmlFor="imageUpload" style={{ marginRight: '10px', cursor: 'pointer' }}>
-                        <FaImage size={30} />
+                    <FaCamera />
                     </label>
                     <input
                         id="imageUpload"

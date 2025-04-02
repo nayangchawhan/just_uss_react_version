@@ -70,7 +70,7 @@ function NavChat({ onUserSelect }) {
                             setSelectedUser(user);
                             onUserSelect(user);
                         }}
-                        style={{ width: '100%', marginBottom: '3px',fontFamily:'Poppins' }}
+                        style={{ width: '100%', marginBottom: '3px',fontFamily:'Poppins',cursor:'pointer' }}
                     >
                         {user.username || 'Unknown User'} {/* Fallback username */}
                     </div>

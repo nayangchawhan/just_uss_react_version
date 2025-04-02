@@ -18,7 +18,7 @@ function Profile() {
         const db = getDatabase();
         const user = auth.currentUser; // Get the current user
 
-        console.log("Current user:", user); // Log current user
+        //console.log("Current user:", user); // Log current user
 
         if (user) {
             const userId = user.uid; // Get the current user's ID
@@ -28,9 +28,9 @@ function Profile() {
             get(userRef).then((snapshot) => {
                 if (snapshot.exists()) {
                     setUserData(snapshot.val());
-                    console.log("User data fetched:", snapshot.val()); // Log user data
+                    //console.log("User data fetched:", snapshot.val()); // Log user data
                 } else {
-                    console.log("No user data found");
+                    //console.log("No user data found");
                 }
             });
 
@@ -44,13 +44,13 @@ function Profile() {
                         ...fetchedPosts[postName]
                     }));
                     setPosts(formattedPosts);
-                    console.log("User posts fetched:", formattedPosts); // Log user posts
+                    //console.log("User posts fetched:", formattedPosts); // Log user posts
                 } else {
-                    console.log("No posts found");
+                    //console.log("No posts found");
                 }
             });
         } else {
-            console.log("User is not authenticated");
+            //console.log("User is not authenticated");
         }
     }, []);
 
@@ -73,7 +73,7 @@ function Profile() {
                             <p>{userData.following} Following</p>
                         </div>
                         <br></br>
-                        <p>{userData.username}</p>
+                        <p>@{userData.username}</p>
                         <p style={{whiteSpace: 'pre-wrap', wordWrap: 'break-word'}}>{userData.bio}</p>
                         <p>{userData.school}</p>
                     </div>

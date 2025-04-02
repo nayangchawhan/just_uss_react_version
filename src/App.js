@@ -11,6 +11,7 @@ import Landing_page from './components/Landing_page';
 import Content from "./components/Content";
 import Profile from './Profile/Profile'; // Updated import path
 import AddPost from './Profile/AddPost';
+import ChatApp from './Texting/ChatApp';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -34,6 +35,7 @@ function App() {
                 <Route path="/edit-profile" element={user ? <EditProfile /> : <Navigate to="/login" />} /> // Add route for EditProfile
                 <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" />} />
                 <Route path="/add-post" element={user ? <AddPost /> : <Navigate to="/login" />} />
+                <Route path="/AI" element={user ? <ChatApp/> : <Navigate to="/login" />} />
             </Routes>
         </Router>
     );
