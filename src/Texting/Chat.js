@@ -5,6 +5,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import NavChat from '../Universe/NavChat';
 import { IoSend } from "react-icons/io5";
 import { FaCamera } from "react-icons/fa6";
+import { BsLightningCharge } from "react-icons/bs";
 import './Chat.css';
 
 function Chat() {
@@ -114,6 +115,20 @@ function Chat() {
         }
     };
 
+    const handleSummarize = async (text, msgId) => {
+        try {
+            const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyAPeYdbiwI8fnDlQQm-PjFzIvgsf0YR8QY", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: `Summarize this: ${text}` }] }] })
+            });
+            const data = await response.json();
+            alert(`Summary: ${data?.candidates?.[0]?.content?.parts?.[0]?.text || "No summary available"}`);
+        } catch (error) {
+            console.error("Error summarizing message:", error);
+        }
+    };
+
     return (
         <div style={{ display: 'flex', height: '100vh' }}>
             <NavChat onUserSelect={setSelectedChat} />
@@ -130,7 +145,8 @@ function Chat() {
                             <span style={{ fontSize: '0.8em', color: '#888', marginLeft: '10px' }}>
                                 {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ""}
                             </span>
-                            {msg.read && <span style={{ color: 'green', fontSize: '0.8em', marginLeft: '5px' }}>✔ Read</span>}
+                            {msg.read && <span style={{ color: 'green', fontSize: '0.8em', marginLeft: '5px' ,marginRight:'5px'}}>✔ Read</span>}
+                            {msg.text && <BsLightningCharge onClick={() => handleSummarize(msg.text, msg.id)} style={{color:'blue'}}/>}
                         </div>
                     ))}
                     <div ref={messagesEndRef} />
