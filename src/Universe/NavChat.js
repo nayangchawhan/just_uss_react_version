@@ -3,6 +3,7 @@ import { db, auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { ref, onValue } from 'firebase/database';
 import { IoIosArrowBack } from "react-icons/io";
+import { MdOutlineGroupAdd } from "react-icons/md";
 import './NavChat.css';
 
 function NavChat({ onUserSelect }) {
@@ -49,7 +50,7 @@ function NavChat({ onUserSelect }) {
         <div className="chat">
             <h1>Justuss</h1>
             <br />
-            <h3 style={{fontFamily:'Poppins'}}><IoIosArrowBack onClick={() => navigate('/')}/> Chats</h3>
+            <h3 style={{fontFamily:'Poppins'}}><IoIosArrowBack onClick={() => navigate('/')}/> Chats<MdOutlineGroupAdd style={{marginTop:'2px',marginLeft:'5px',cursor:'pointer'}}/></h3>
 
             {/* Search bar */}
             <input

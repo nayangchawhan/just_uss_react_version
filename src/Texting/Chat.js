@@ -6,6 +6,7 @@ import NavChat from '../Universe/NavChat';
 import { IoSend } from "react-icons/io5";
 import { FaCamera } from "react-icons/fa6";
 import { BsLightningCharge } from "react-icons/bs";
+import { BsReply } from "react-icons/bs";
 import './Chat.css';
 
 function Chat() {
@@ -15,6 +16,7 @@ function Chat() {
     const [users, setUsers] = useState([]);
     const [image, setImage] = useState(null);
     const [preview, setPreview] = useState(null);
+    const [replyMessage, setReplyMessage] = useState(null); 
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
@@ -103,12 +105,17 @@ function Chat() {
                     sender: senderId,
                     receiver: receiverId,
                     senderName,
-                    read: false  // Initially unread
+                    read: false , // Initially unread
+                    replyTo: replyMessage ? {
+                        text: replyMessage.text,
+                        senderName: replyMessage.senderName
+                    } : null
                 });
 
                 setMessage('');
                 setImage(null);
                 setPreview(null);
+                setReplyMessage(null);
             }
         } catch (error) {
             console.error("Error sending message:", error);
@@ -129,6 +136,10 @@ function Chat() {
         }
     };
 
+    const handleReply = (msg) => {
+        setReplyMessage(msg);
+    };
+
     return (
         <div style={{ display: 'flex', height: '100vh' }}>
             <NavChat onUserSelect={setSelectedChat} />
@@ -140,17 +151,28 @@ function Chat() {
                     {messages.map((msg, index) => (
                         <div key={index} style={{ padding: '5px', borderBottom: '1px solid #ccc', fontFamily: "Poppins" }}>
                             <strong>{msg.senderName}</strong>: 
+                            {msg.replyTo && (
+                                <div style={{ background: '#e0e0e0', padding: '5px', borderRadius: '5px', marginBottom: '3px', fontSize: '0.9em' }}>
+                                    <strong>Replying to {msg.replyTo.senderName}:</strong> {msg.replyTo.text}
+                                </div>
+                            )}
                             {msg.text && <p style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>}
                             {msg.imageUrl && <img src={msg.imageUrl} alt="sent" style={{ maxWidth: '200px', borderRadius: '10px' }} />}
                             <span style={{ fontSize: '0.8em', color: '#888', marginLeft: '10px' }}>
                                 {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ""}
                             </span>
                             {msg.read && <span style={{ color: 'green', fontSize: '0.8em', marginLeft: '5px' ,marginRight:'5px'}}>✔ Read</span>}
-                            {msg.text && <BsLightningCharge onClick={() => handleSummarize(msg.text, msg.id)} style={{color:'blue'}}/>}
+                            {msg.text && <BsLightningCharge onClick={() => handleSummarize(msg.text, msg.id)} style={{color:'blue',marginRight:'5px',marginLeft:'5px'}}/>}
+                            <BsReply onClick={() => handleReply(msg)}/>
                         </div>
                     ))}
                     <div ref={messagesEndRef} />
                 </div>
+                {replyMessage && (
+                    <div style={{ background: '#f0f0f0', padding: '10px', borderRadius: '5px', marginBottom: '5px' }}>
+                        <strong>Replying to:</strong> {replyMessage.text}
+                    </div>
+                )}
                 {preview && (
                     <div style={{ textAlign: 'center', padding: '10px' }}>
                         <img src={preview} alt="Preview" style={{ maxWidth: '200px', borderRadius: '10px' }} />

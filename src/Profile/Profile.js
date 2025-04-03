@@ -55,7 +55,7 @@ function Profile() {
     }, []);
 
     return (
-        <div className="profile">
+        <div className="profile" style={{ display: 'flex', height: '100vh' }}>
             <Nav_bar />
             {userData ? (
                 <div className="profile-info">
