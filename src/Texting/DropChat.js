@@ -1,75 +1,99 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { db, auth, storage } from '../firebase';
-import { ref, onValue, push, remove, update } from 'firebase/database';
+import { ref, onValue, get, push } from 'firebase/database';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import NavChat from '../Universe/NavChat';
+import Nav_bar from '../Universe/Nav_bar';
 import { IoSend } from "react-icons/io5";
 import { FaCamera } from "react-icons/fa6";
-import { BsLightningCharge } from "react-icons/bs";
-import { BsReply } from "react-icons/bs";
-import { useNavigate } from 'react-router-dom';
+import { BsLightningCharge, BsReply } from "react-icons/bs";
 import './Chat.css';
 
-function Chat() {
-    const [selectedChat, setSelectedChat] = useState(null);
+function DropChat() {
+    const [latitude, setLatitude] = useState(null);
+    const [longitude, setLongitude] = useState(null);
     const [message, setMessage] = useState('');
     const [messages, setMessages] = useState([]);
-    const [users, setUsers] = useState([]);
     const [image, setImage] = useState(null);
     const [preview, setPreview] = useState(null);
-    const [replyMessage, setReplyMessage] = useState(null); 
+    const [replyMessage, setReplyMessage] = useState(null);
     const messagesEndRef = useRef(null);
-
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        const usersRef = ref(db, 'users');
-        onValue(usersRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                setUsers(Object.values(data));
-            }
-        });
-    }, []);
+    const [users, setUsers] = useState([]); // All users from Firebase
 
     useEffect(() => {
-        if (selectedChat) {
-            const senderId = auth.currentUser.uid;
-            const receiverId = selectedChat.uid;
-            const chatID = senderId < receiverId ? `${senderId}_${receiverId}` : `${receiverId}_${senderId}`;
-            const messagesRef = ref(db, `chats/${chatID}/messages`);
-
-            onValue(messagesRef, (snapshot) => {
+            const usersRef = ref(db, 'users');
+            onValue(usersRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
-                    const messageArray = Object.entries(data)
-                        .map(([id, msg]) => ({ id, ...msg }))
-                        .filter(msg => msg.timestamp); // Remove deleted messages
-
-                    setMessages(messageArray);
-
-                    // Mark messages as read **only if the recipient views them**
-                    if (messageArray.length > 0) {
-                        messageArray.forEach(({ id, receiver, read }) => {
-                            if (receiver === senderId && !read) {
-                                update(ref(db, `chats/${chatID}/messages/${id}`), { read: true });
-                            }
-                        });
-                    }
-
-                    // Auto-delete **read** messages older than 24 hours
-                    const currentTime = Date.now();
-                    messageArray.forEach(({ id, timestamp, read }) => {
-                        if (read && currentTime - timestamp >= 24 * 60 * 60 * 1000) {
-                            remove(ref(db, `chats/${chatID}/messages/${id}`));
-                        }
-                    });
-                } else {
-                    setMessages([]); // Clear messages when deleted
+                    setUsers(Object.values(data));
                 }
             });
+        }, []);
+    const senderId = auth.currentUser.uid;
+    const senderName = users.find(user => user.uid === senderId)?.username || "Anonymous";
+
+    //Get User Location
+    useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setLatitude(position.coords.latitude);
+                    setLongitude(position.coords.longitude);
+                },
+                (error) => {
+                    console.error("Location access denied:", error);
+                    alert("Please allow location access to use location-based chat.");
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser.");
         }
-    }, [selectedChat]);
+    }, []);
+
+    //Haversine Formula to Calculate Distance (in KM)
+    const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+        const R = 6371; // Earth's radius in km
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // Distance in km
+    };
+
+    //Fetch Nearby Messages (within 1KM)
+    useEffect(() => {
+        if (latitude && longitude) {
+            const messagesRef = ref(db, `chats/messages`);
+
+            onValue(messagesRef, async (snapshot) => {
+                if (!snapshot.exists()) {
+                    setMessages([]);
+                    return;
+                }
+
+                const allMessages = snapshot.val();
+                const filteredMessages = [];
+
+                for (const [messageId, msg] of Object.entries(allMessages)) {
+                    const senderRef = ref(db, `users/${msg.sender}/location`);
+                    const senderSnap = await get(senderRef);
+
+                    if (!senderSnap.exists()) continue;
+                    
+                    const senderLoc = senderSnap.val();
+                    const distance = getDistanceFromLatLonInKm(latitude, longitude, senderLoc.latitude, senderLoc.longitude);
+                    
+                    if (distance <= 1) {
+                        filteredMessages.push({ id: messageId, ...msg });
+                    }
+                }
+
+                setMessages(filteredMessages);
+            });
+        }
+    }, [latitude, longitude]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -84,31 +108,35 @@ function Chat() {
     };
 
     const handleSendMessage = async () => {
-        if (!selectedChat) return;
+        if (!latitude || !longitude) {
+            alert("Location not detected. Please allow location access.");
+            return;
+        }
 
-        const senderId = auth.currentUser.uid;
-        const receiverId = selectedChat.uid;
-        const chatID = senderId < receiverId ? `${senderId}_${receiverId}` : `${receiverId}_${senderId}`;
-        const senderName = users.find(user => user.uid === senderId)?.username || "Unknown";
+        const senderId = auth.currentUser?.uid;
+        if (!senderId) {
+            alert("User not authenticated.");
+            return;
+        }
+
         let imageUrl = null;
-
         try {
             if (image) {
-                const imageRef = storageRef(storage, `chatImages/${chatID}/${Date.now()}_${image.name}`);
+                const imageRef = storageRef(storage, `chatImages/${Date.now()}_${image.name}`);
                 await uploadBytes(imageRef, image);
                 imageUrl = await getDownloadURL(imageRef);
             }
 
             if (message.trim() !== '' || imageUrl) {
-                const messagesRef = ref(db, `chats/${chatID}/messages`);
+                const messagesRef = ref(db, `chats/messages`);
                 await push(messagesRef, {
                     text: message || "",
                     imageUrl: imageUrl || null,
                     timestamp: Date.now(),
                     sender: senderId,
-                    receiver: receiverId,
                     senderName,
-                    read: false , // Initially unread
+                    latitude,
+                    longitude,
                     replyTo: replyMessage ? {
                         text: replyMessage.text,
                         senderName: replyMessage.senderName
@@ -125,7 +153,7 @@ function Chat() {
         }
     };
 
-    const handleSummarize = async (text, msgId) => {
+    const handleSummarize = async (text) => {
         try {
             const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyAPeYdbiwI8fnDlQQm-PjFzIvgsf0YR8QY", {
                 method: "POST",
@@ -144,28 +172,20 @@ function Chat() {
     };
 
     return (
-        <div style={{ display: 'flex', height: '100vh' }}>
-            <NavChat onUserSelect={setSelectedChat} />
+        <div style={{ display: 'flex', height: '100vh', marginLeft: '20%' }}>
+            <Nav_bar />
             <div className="chat-container" style={{ width: '70%', padding: '10px', display: 'flex', flexDirection: 'column' }}>
-                <div className="chat-header" style={{ padding: '10px', borderBottom: '1px solid #ccc', fontFamily: "Poppins" }}>
-                {selectedChat ? (
-                        <h3 
-                            style={{ cursor: "pointer" }} 
-                            onClick={() => navigate(`/profile/${selectedChat.uid}`)}
-                        >
-                            Chatting with {selectedChat.username}
-                        </h3>
-                    ) : (
-                        <h3>Select a chat to start messaging</h3>
-                    )}
+                <div className="chat-header">
+                    <h3>Location-Based Chat</h3>
                 </div>
+
                 <div className="messages" style={{ flex: 1, overflowY: 'scroll', padding: '10px' }}>
                     {messages.map((msg, index) => (
                         <div key={index} style={{ padding: '5px', borderBottom: '1px solid #ccc', fontFamily: "Poppins" }}>
                             <strong>{msg.senderName}</strong>: 
                             {msg.replyTo && (
                                 <div style={{ background: '#e0e0e0', padding: '5px', borderRadius: '5px', marginBottom: '3px', fontSize: '0.9em' }}>
-                                    <strong>Replying to {msg.replyTo.senderName}:</strong> <p style={{ whiteSpace: 'pre-wrap' }}>{msg.replyTo.text}</p>
+                                    <strong>Replying to {msg.replyTo.senderName}:</strong> {msg.replyTo.text}
                                 </div>
                             )}
                             {msg.text && <p style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>}
@@ -217,4 +237,4 @@ function Chat() {
     );
 }
 
-export default Chat;
+export default DropChat;

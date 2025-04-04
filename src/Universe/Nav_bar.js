@@ -7,6 +7,7 @@ import { GiFairyWand } from "react-icons/gi";
 import { LiaShoppingBasketSolid } from "react-icons/lia";
 import { PiChats } from "react-icons/pi";
 import { IoHomeOutline } from "react-icons/io5";
+import { PiChatTeardropDots } from "react-icons/pi";
 import "./Navbar.css"
 
 const Nav_bar = () => {
@@ -32,6 +33,7 @@ const Nav_bar = () => {
                 <ul>
                     <li onClick={() => navigate('/')}><IoHomeOutline /> Home</li><br></br>
                     <li onClick={() => navigate('/chat')}><PiChats /> Chat</li><br></br> {/* Navigate to Chat */}
+                    <li onClick={() => navigate('/dropchat')}><PiChatTeardropDots /> DropChat</li><br></br> {/* Navigate to DropChat */}
                     <li onClick={() => navigate('/AI')} >
                         <GiFairyWand style={{ color: 'gold' }} /> JustMind
                     </li><br></br>

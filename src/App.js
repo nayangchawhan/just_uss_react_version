@@ -12,6 +12,7 @@ import Content from "./components/Content";
 import Profile from './Profile/Profile'; // Updated import path
 import AddPost from './Profile/AddPost';
 import ChatApp from './Texting/ChatApp';
+import DropChat from './Texting/DropChat'; // Updated import path
 
 function App() {
     const [user, setUser] = useState(null);
@@ -36,6 +37,8 @@ function App() {
                 <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" />} />
                 <Route path="/add-post" element={user ? <AddPost /> : <Navigate to="/login" />} />
                 <Route path="/AI" element={user ? <ChatApp/> : <Navigate to="/login" />} />
+                <Route path='/dropchat' element={user ? <DropChat /> : <Navigate to="/login" />} />
+                <Route path="/profile/:userId" element={<Profile />} />
             </Routes>
         </Router>
     );
