@@ -94,6 +94,7 @@ function Login() {
 
     return (
         <div className='login'>
+            <h2 style={{fontFamily:'Just Another Hand', fontSize:'70px'}}>Justuss</h2>
             <h2>Login</h2>
             <form onSubmit={handleLogin}>
                 <input

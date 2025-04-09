@@ -20,7 +20,7 @@ function Home() {
     return (
         <div style={{ display: 'flex' }}>
             <Nav_bar/>
-            <div className="main-content" style={{ width: '60%', padding: '10px' }}>
+            <div className="main-content" style={{ width: '60%', padding: '10px',marginLeft:'20%' }}>
                 {/* Stories Section */}
                 <div className="stories" style={{ marginBottom: '20px' }}>
                     <h3>Stories</h3>

@@ -95,7 +95,7 @@ function Profile() {
                     posts.map((post, index) => (
                         <div key={index} className="post">
                             <img src={post.imageUrl} alt="Post" />
-                            <p style={{whiteSpace: 'pre-wrap', wordWrap: 'break-word'}}>{post.description}</p>
+                            {/* <p style={{whiteSpace: 'pre-wrap', wordWrap: 'break-word'}}>{post.description}</p> */}
                         </div>
                     ))
                 ) : (
