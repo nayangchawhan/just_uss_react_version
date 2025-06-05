@@ -1,0 +1,79 @@
+.add-story-container {
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .story-preview-box {
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 20px;
+    position: relative;
+  }
+  
+  .story-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .story-controls {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .draggable {
+    position: absolute;
+    cursor: move;
+  }
+  
+  .text-overlay {
+    font-weight: bold;
+    text-shadow: 0 0 5px #000;
+  }
+  
+  .emoji-palette {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  
+  textarea {
+    width: 80%;
+    height: 60px;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+  
+  .controls {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .sticker-panel {
+    margin-top: 10px;
+  }
+  
+  .sticker-panel button {
+    font-size: 1.5rem;
+    margin: 0 5px;
+  }
+  
+  .upload-btn {
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #2079ff;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  

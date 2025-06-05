@@ -87,7 +87,10 @@ function Profile() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <h2>Posts</h2>
                 {isOwnProfile && (
+                    <>
                     <button onClick={() => navigate('/add-post')} style={{borderRadius:"50%", marginLeft:"10px", scale:".7", backgroundColor:"#414141"}}>+</button>
+                    <button onClick={() => navigate('/add-story')}style={{backgroundColor: "#209fff",color: "#fff",border: "none",padding: "8px 12px",borderRadius: "6px",marginLeft: "10px",cursor: "pointer"}}>Add Story +</button>
+                    </>
                 )}
             </div>
             <div className="profile-posts">

@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { ref, push, onValue } from "firebase/database";
+import { ref, push, onValue, remove } from "firebase/database";
 import Nav_bar from "../Universe/Nav_bar";
 import axios from "axios";
 import { FaWandMagicSparkles } from "react-icons/fa6";
-import "./ChatApp.css"; // Ensure you have a CSS file for styling
+import "./ChatApp.css";
 
 const ChatApp = () => {
   const [user, setUser] = useState(null);
@@ -35,6 +35,8 @@ const ChatApp = () => {
       const data = snapshot.val();
       if (data) {
         setMessages(Object.values(data));
+      } else {
+        setMessages([]);
       }
     });
   };
@@ -65,6 +67,20 @@ const ChatApp = () => {
     }
   };
 
+  const deleteConversations = () => {
+    if (user) {
+      const userChatsRef = ref(db, `chats/${user.uid}`);
+      remove(userChatsRef)
+        .then(() => {
+          setMessages([]);
+          alert("All conversations deleted.");
+        })
+        .catch((error) => {
+          console.error("Error deleting conversations:", error);
+        });
+    }
+  };
+
   return (
     <div className="chat-container1">
       <Nav_bar />
@@ -90,6 +106,9 @@ const ChatApp = () => {
           placeholder="Type a message..." 
         />
         <button onClick={sendMessage}><FaWandMagicSparkles /></button>
+        <button onClick={deleteConversations} style={{ marginLeft: "10px", backgroundColor: "#ff4d4f", color: "white" }}>
+          Delete Chat
+        </button>
       </div>
     </div>
   );
