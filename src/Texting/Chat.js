@@ -105,6 +105,8 @@ function Chat() {
                     text: message || "",
                     imageUrl: imageUrl || null,
                     timestamp: Date.now(),
+                    date: new Date().toLocaleDateString(), // e.g., 6/25/2025
+                    time: new Date().toLocaleTimeString(), // e.g., 10:32:15 AM
                     sender: senderId,
                     receiver: receiverId,
                     senderName,
@@ -171,7 +173,8 @@ function Chat() {
                             {msg.text && <p style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>}
                             {msg.imageUrl && <img src={msg.imageUrl} alt="sent" style={{ maxWidth: '200px', borderRadius: '10px' }} />}
                             <span style={{ fontSize: '0.8em', color: '#888', marginLeft: '10px' }}>
-                                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ""}
+                                {msg.date || new Date(msg.timestamp).toLocaleDateString()}{" "}
+                                {msg.time || new Date(msg.timestamp).toLocaleTimeString()}
                             </span>
                             {msg.read && <span style={{ color: 'green', fontSize: '0.8em', marginLeft: '5px' ,marginRight:'5px'}}>✔ Read</span>}
                             {msg.text && <BsLightningCharge onClick={() => handleSummarize(msg.text, msg.id)} style={{color:'blue',marginRight:'5px',marginLeft:'5px'}}/>}
@@ -207,7 +210,14 @@ function Chat() {
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="Type a message..."
                         style={{ flex: 1, marginRight: '10px' }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage();
+                            }
+                        }}
                     />
+
                     <button onClick={handleSendMessage} style={{ width: '50px', height: '50px', borderRadius: '50%' }}>
                         <IoSend />
                     </button>

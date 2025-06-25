@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { db, auth, storage } from '../firebase';
-import { ref, onValue, get, push } from 'firebase/database';
+import { ref, onValue, push, set, get, update } from 'firebase/database';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Nav_bar from '../Universe/Nav_bar';
 import { IoSend } from "react-icons/io5";
@@ -11,27 +11,35 @@ import './Chat.css';
 function DropChat() {
     const [latitude, setLatitude] = useState(null);
     const [longitude, setLongitude] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
     const [message, setMessage] = useState('');
     const [messages, setMessages] = useState([]);
     const [image, setImage] = useState(null);
     const [preview, setPreview] = useState(null);
     const [replyMessage, setReplyMessage] = useState(null);
+    const [users, setUsers] = useState([]);
     const messagesEndRef = useRef(null);
-    const [users, setUsers] = useState([]); // All users from Firebase
 
+    // Monitor user authentication
     useEffect(() => {
-            const usersRef = ref(db, 'users');
-            onValue(usersRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    setUsers(Object.values(data));
-                }
-            });
-        }, []);
-    const senderId = auth.currentUser.uid;
-    const senderName = users.find(user => user.uid === senderId)?.username || "Anonymous";
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if (user) {
+                setCurrentUser(user);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
-    //Get User Location
+    // Get all users for usernames
+    useEffect(() => {
+        const usersRef = ref(db, 'users');
+        onValue(usersRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) setUsers(Object.values(data));
+        });
+    }, []);
+
+    // Get current user location
     useEffect(() => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -41,32 +49,58 @@ function DropChat() {
                 },
                 (error) => {
                     console.error("Location access denied:", error);
-                    alert("Please allow location access to use location-based chat.");
+                    alert("Please allow location access.");
                 }
             );
         } else {
-            alert("Geolocation is not supported by your browser.");
+            alert("Geolocation is not supported.");
         }
     }, []);
 
-    //Haversine Formula to Calculate Distance (in KM)
+    // Haversine distance
     const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
-        const R = 6371; // Earth's radius in km
+        const R = 6371;
         const dLat = (lat2 - lat1) * (Math.PI / 180);
         const dLon = (lon2 - lon1) * (Math.PI / 180);
         const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) ** 2;
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c; // Distance in km
+        return R * c;
     };
 
-    //Fetch Nearby Messages (within 1KM)
+    useEffect(() => {
+            const deleteOldMessages = async () => {
+                const messagesRef = ref(db, 'chats/messages');
+                const snapshot = await get(messagesRef);
+                const now = Date.now();
+                const cutoff = now - 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+                if (snapshot.exists()) {
+                    const messages = snapshot.val();
+                    const updates = {};
+
+                    for (const [id, msg] of Object.entries(messages)) {
+                        if (msg.timestamp && msg.timestamp < cutoff) {
+                            updates[`chats/messages/${id}`] = null; // Delete message
+                        }
+                    }
+
+                    if (Object.keys(updates).length > 0) {
+                        await update(ref(db), updates);
+                        console.log("Old messages deleted.");
+                    }
+                }
+            };
+
+            deleteOldMessages();
+        }, []);
+
+    // Fetch nearby messages
     useEffect(() => {
         if (latitude && longitude) {
-            const messagesRef = ref(db, `chats/messages`);
-
+            const messagesRef = ref(db, `locmessages`);
             onValue(messagesRef, async (snapshot) => {
                 if (!snapshot.exists()) {
                     setMessages([]);
@@ -74,27 +108,27 @@ function DropChat() {
                 }
 
                 const allMessages = snapshot.val();
-                const filteredMessages = [];
+                const filtered = [];
 
-                for (const [messageId, msg] of Object.entries(allMessages)) {
+                for (const [id, msg] of Object.entries(allMessages)) {
                     const senderRef = ref(db, `users/${msg.sender}/location`);
                     const senderSnap = await get(senderRef);
-
                     if (!senderSnap.exists()) continue;
-                    
-                    const senderLoc = senderSnap.val();
-                    const distance = getDistanceFromLatLonInKm(latitude, longitude, senderLoc.latitude, senderLoc.longitude);
-                    
-                    if (distance <= 1) {
-                        filteredMessages.push({ id: messageId, ...msg });
+
+                    const loc = senderSnap.val();
+                    const dist = getDistanceFromLatLonInKm(latitude, longitude, loc.latitude, loc.longitude);
+
+                    if (dist <= 1) {
+                        filtered.push({ id, ...msg });
                     }
                 }
 
-                setMessages(filteredMessages);
+                setMessages(filtered);
             });
         }
     }, [latitude, longitude]);
 
+    // Scroll to bottom
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
@@ -109,30 +143,36 @@ function DropChat() {
 
     const handleSendMessage = async () => {
         if (!latitude || !longitude) {
-            alert("Location not detected. Please allow location access.");
+            alert("Location not detected.");
             return;
         }
 
-        const senderId = auth.currentUser?.uid;
-        if (!senderId) {
-            alert("User not authenticated.");
+        if (!currentUser) {
+            alert("User not logged in.");
             return;
         }
+
+        const senderId = currentUser.uid;
+        const senderName = users.find(user => user.uid === senderId)?.username || currentUser.email || "Anonymous";
+
+        // Save user location
+        await set(ref(db, `users/${senderId}/location`), { latitude, longitude });
 
         let imageUrl = null;
         try {
             if (image) {
-                const imageRef = storageRef(storage, `chatImages/${Date.now()}_${image.name}`);
-                await uploadBytes(imageRef, image);
-                imageUrl = await getDownloadURL(imageRef);
+                const imgRef = storageRef(storage, `chatImages/${Date.now()}_${image.name}`);
+                await uploadBytes(imgRef, image);
+                imageUrl = await getDownloadURL(imgRef);
             }
 
             if (message.trim() !== '' || imageUrl) {
-                const messagesRef = ref(db, `chats/messages`);
-                await push(messagesRef, {
-                    text: message || "",
+                const messageData = {
+                    text: message.trim(),
                     imageUrl: imageUrl || null,
                     timestamp: Date.now(),
+                    date: new Date().toLocaleDateString(), // e.g., 6/25/2025
+                    time: new Date().toLocaleTimeString(), // e.g., 10:32:15 AM
                     sender: senderId,
                     senderName,
                     latitude,
@@ -141,7 +181,9 @@ function DropChat() {
                         text: replyMessage.text,
                         senderName: replyMessage.senderName
                     } : null
-                });
+                };
+
+                await push(ref(db, `locmessages`), messageData);
 
                 setMessage('');
                 setImage(null);
@@ -163,7 +205,7 @@ function DropChat() {
             const data = await response.json();
             alert(`Summary: ${data?.candidates?.[0]?.content?.parts?.[0]?.text || "No summary available"}`);
         } catch (error) {
-            console.error("Error summarizing message:", error);
+            console.error("Summarization error:", error);
         }
     };
 
@@ -176,13 +218,13 @@ function DropChat() {
             <Nav_bar />
             <div className="chat-container" style={{ width: '70%', padding: '10px', display: 'flex', flexDirection: 'column' }}>
                 <div className="chat-header">
-                    <h3>Location-Based Chat</h3>
+                    <h3>Drop Chat</h3>
                 </div>
 
                 <div className="messages" style={{ flex: 1, overflowY: 'scroll', padding: '10px' }}>
                     {messages.map((msg, index) => (
                         <div key={index} style={{ padding: '5px', borderBottom: '1px solid #ccc', fontFamily: "Poppins" }}>
-                            <strong>{msg.senderName}</strong>: 
+                            <strong>{msg.senderName}</strong>:
                             {msg.replyTo && (
                                 <div style={{ background: '#e0e0e0', padding: '5px', borderRadius: '5px', marginBottom: '3px', fontSize: '0.9em' }}>
                                     <strong>Replying to {msg.replyTo.senderName}:</strong> {msg.replyTo.text}
@@ -191,25 +233,29 @@ function DropChat() {
                             {msg.text && <p style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>}
                             {msg.imageUrl && <img src={msg.imageUrl} alt="sent" style={{ maxWidth: '200px', borderRadius: '10px' }} />}
                             <span style={{ fontSize: '0.8em', color: '#888', marginLeft: '10px' }}>
-                                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ""}
+                                {msg.date || new Date(msg.timestamp).toLocaleDateString()}{" "}
+                                {msg.time || new Date(msg.timestamp).toLocaleTimeString()}
                             </span>
-                            {msg.read && <span style={{ color: 'green', fontSize: '0.8em', marginLeft: '5px' ,marginRight:'5px'}}>✔ Read</span>}
-                            {msg.text && <BsLightningCharge onClick={() => handleSummarize(msg.text, msg.id)} style={{color:'blue',marginRight:'5px',marginLeft:'5px'}}/>}
-                            <BsReply onClick={() => handleReply(msg)}/>
+
+                            {msg.text && <BsLightningCharge onClick={() => handleSummarize(msg.text)} style={{ color: 'blue', margin: '0 5px' }} />}
+                            <BsReply onClick={() => handleReply(msg)} />
                         </div>
                     ))}
                     <div ref={messagesEndRef} />
                 </div>
+
                 {replyMessage && (
                     <div style={{ background: '#f0f0f0', padding: '10px', borderRadius: '5px', marginBottom: '5px' }}>
                         <strong>Replying to:</strong> {replyMessage.text}
                     </div>
                 )}
+
                 {preview && (
                     <div style={{ textAlign: 'center', padding: '10px' }}>
                         <img src={preview} alt="Preview" style={{ maxWidth: '200px', borderRadius: '10px' }} />
                     </div>
                 )}
+
                 <div className="message-input" style={{ display: 'flex', padding: '10px', alignItems: 'center' }}>
                     <label htmlFor="imageUpload" style={{ marginRight: '10px', cursor: 'pointer' }}>
                         <FaCamera />
@@ -227,7 +273,14 @@ function DropChat() {
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="Type a message..."
                         style={{ flex: 1, marginRight: '10px' }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage();
+                            }
+                        }}
                     />
+
                     <button onClick={handleSendMessage} style={{ width: '50px', height: '50px', borderRadius: '50%' }}>
                         <IoSend />
                     </button>
