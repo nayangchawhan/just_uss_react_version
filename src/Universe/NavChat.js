@@ -8,81 +8,100 @@ import './NavChat.css';
 
 function NavChat({ onUserSelect }) {
     const navigate = useNavigate();
-
-    const [users, setUsers] = useState([]); // All users from Firebase
-    const [recentChats, setRecentChats] = useState([]); // Users we've chatted with
+    const [users, setUsers] = useState([]);
+    const [recentChats, setRecentChats] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [streaks, setStreaks] = useState({}); // Store conversation counts
+    const [streaks, setStreaks] = useState({});
 
     // Fetch all users
     useEffect(() => {
         const usersRef = ref(db, 'users');
         onValue(usersRef, (snapshot) => {
             const data = snapshot.val();
-            if (data) {
-                const userList = Object.values(data)
-                    .filter(user => user.uid !== auth.currentUser.uid && user.username); // Ensure username exists
+            if (data && auth.currentUser) {
+                const currentUserId = auth.currentUser.uid;
+                const userList = Object.values(data).filter(
+                    user => user.uid !== currentUserId && user.username
+                );
                 setUsers(userList);
             }
         });
     }, []);
 
+    // Fetch recent chats and calculate streaks
     useEffect(() => {
-        const userId = auth.currentUser.uid;
+        const userId = auth.currentUser?.uid;
+        if (!userId || users.length === 0) return;
+
         const chatsRef = ref(db, `users/${userId}/chats`);
-        
         onValue(chatsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 const chatUserIds = Object.keys(data);
                 const chatUsers = users.filter(user => chatUserIds.includes(user.uid));
                 setRecentChats(chatUsers);
-    
+
+                // Fetch and calculate streaks
                 let streakData = {};
-    
+
                 chatUserIds.forEach(chatUserId => {
-                    const messagesRef = ref(db, `chats/${userId}_${chatUserId}/messages`);
-    
-                    onValue(messagesRef, (msgSnapshot) => {
-                        const messages = msgSnapshot.val();
-    
-                        if (messages) {
-                            const messageArray = Object.values(messages);
-                            
-                            let streakCount = 0;
-                            let lastSender = null;
-                            
-                            messageArray.forEach((msg) => {
-                                if (msg.sender !== lastSender) {
-                                    streakCount++; // Increase streak only if sender changes
-                                    lastSender = msg.sender; // Update last sender
-                                }
+                    const chatPath1 = `chats/${userId}_${chatUserId}/messages`;
+                    const chatPath2 = `chats/${chatUserId}_${userId}/messages`;
+
+                    // Try both path combinations
+                    const tryBothPaths = async () => {
+                        let found = false;
+                        const tryPath = (path) => {
+                            return new Promise((resolve) => {
+                                const msgRef = ref(db, path);
+                                onValue(msgRef, (msgSnapshot) => {
+                                    const messages = msgSnapshot.val();
+                                    if (messages && !found) {
+                                        found = true;
+                                        const messageArray = Object.values(messages);
+                                        let streakCount = 0;
+                                        let lastSender = null;
+
+                                        messageArray.forEach((msg) => {
+                                            if (msg.sender !== lastSender) {
+                                                streakCount++;
+                                                lastSender = msg.sender;
+                                            }
+                                        });
+
+                                        streakData[chatUserId] = streakCount;
+                                        setStreaks(prev => ({ ...prev, ...streakData }));
+                                    }
+                                    resolve();
+                                }, { onlyOnce: true });
                             });
-    
-                            streakData[chatUserId] = streakCount;
-                        } else {
-                            streakData[chatUserId] = 0;
-                        }
-    
-                        setStreaks({ ...streakData }); // Update streak state
-                    });
+                        };
+
+                        await tryPath(chatPath1);
+                        if (!found) await tryPath(chatPath2);
+                    };
+
+                    tryBothPaths();
                 });
+            } else {
+                setRecentChats([]);
             }
         });
     }, [users]);
-    
 
-    // Filter users based on search term
+    // Filter users based on search input
     const filteredUsers = searchTerm
-        ? users.filter(user => user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase()))
+        ? users.filter(user => user.username?.toLowerCase().includes(searchTerm.toLowerCase()))
         : recentChats;
 
     return (
         <div className="chat">
             <h1>Justuss</h1>
             <br />
-            <h3 style={{fontFamily:'Poppins'}}><IoIosArrowBack onClick={() => navigate('/')}/> Chats</h3>
+            <h3 style={{ fontFamily: 'Poppins' }}>
+                <IoIosArrowBack onClick={() => navigate('/')} style={{ cursor: 'pointer' }} /> Chats
+            </h3>
 
             {/* Search bar */}
             <input
@@ -90,10 +109,17 @@ function NavChat({ onUserSelect }) {
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '100%', padding: '5px', marginBottom: '10px', fontFamily: 'Poppins' }}
+                style={{
+                    width: '100%',
+                    padding: '5px',
+                    marginBottom: '10px',
+                    fontFamily: 'Poppins',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                }}
             />
 
-            {/* User List */}
+            {/* Chat List */}
             <div className="chat-list1">
                 {filteredUsers.map((user) => (
                     <div
@@ -103,15 +129,28 @@ function NavChat({ onUserSelect }) {
                             setSelectedUser(user);
                             onUserSelect(user);
                         }}
-                        style={{ width: '100%', marginBottom: '3px',fontFamily:'Poppins',cursor:'pointer' }}
+                        style={{
+                            width: '100%',
+                            padding: '8px',
+                            marginBottom: '5px',
+                            fontFamily: 'Poppins',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #eee'
+                        }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                        {user.username || 'Unknown User'} {/* Fallback username */}
-                        {streaks[user.uid] > 0 && (
-                            <span style={{ display: 'flex', alignItems: 'center', marginLeft: '5px', color: 'orange' }}>
-                                <ImFire /> {streaks[user.uid]}
-                            </span>
-                        )}
+                            {user.username || 'Unknown User'}
+                            {streaks[user.uid] > 0 && (
+                                <span style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    marginLeft: '8px',
+                                    color: 'orange',
+                                    fontSize: '0.9em'
+                                }}>
+                                    <ImFire style={{ marginRight: '3px' }} /> {streaks[user.uid]}
+                                </span>
+                            )}
                         </div>
                     </div>
                 ))}
