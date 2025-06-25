@@ -57,13 +57,14 @@ function EditProfile() {
 
             // Update user data in the database
             await update(ref(db, 'users/' + userId), {
-                username,
-                email,
-                bio,
-                address,
-                school,
-                profilePicture: profilePictureUrl || userData.profilePicture, // Keep old picture if not updated
+                username: username ?? '',
+                email: email ?? '',
+                bio: bio ?? '',
+                address: address ?? '',
+                school: school ?? '',
+                profilePicture: profilePictureUrl || userData?.profilePicture || '',
             });
+
 
             // Redirect or perform other actions after successful update
         }
