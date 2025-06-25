@@ -17,7 +17,7 @@ function Chat() {
     const [users, setUsers] = useState([]);
     const [image, setImage] = useState(null);
     const [preview, setPreview] = useState(null);
-    const [replyMessage, setReplyMessage] = useState(null); 
+    const [replyMessage, setReplyMessage] = useState(null);
     const messagesEndRef = useRef(null);
 
     const navigate = useNavigate();
@@ -44,20 +44,18 @@ function Chat() {
                 if (data) {
                     const messageArray = Object.entries(data)
                         .map(([id, msg]) => ({ id, ...msg }))
-                        .filter(msg => msg.timestamp); // Remove deleted messages
+                        .filter(msg => msg.timestamp);
 
                     setMessages(messageArray);
 
-                    // Mark messages as read **only if the recipient views them**
-                    if (messageArray.length > 0) {
-                        messageArray.forEach(({ id, receiver, read }) => {
-                            if (receiver === senderId && !read) {
-                                update(ref(db, `chats/${chatID}/messages/${id}`), { read: true });
-                            }
-                        });
-                    }
+                    // Mark as read if recipient is viewing
+                    messageArray.forEach(({ id, receiver, read }) => {
+                        if (receiver === senderId && !read) {
+                            update(ref(db, `chats/${chatID}/messages/${id}`), { read: true });
+                        }
+                    });
 
-                    // Auto-delete **read** messages older than 24 hours
+                    // Auto-delete read messages after 24 hours
                     const currentTime = Date.now();
                     messageArray.forEach(({ id, timestamp, read }) => {
                         if (read && currentTime - timestamp >= 24 * 60 * 60 * 1000) {
@@ -65,7 +63,7 @@ function Chat() {
                         }
                     });
                 } else {
-                    setMessages([]); // Clear messages when deleted
+                    setMessages([]);
                 }
             });
         }
@@ -101,20 +99,33 @@ function Chat() {
 
             if (message.trim() !== '' || imageUrl) {
                 const messagesRef = ref(db, `chats/${chatID}/messages`);
-                await push(messagesRef, {
+                const newMessageRef = await push(messagesRef, {
                     text: message || "",
                     imageUrl: imageUrl || null,
                     timestamp: Date.now(),
-                    date: new Date().toLocaleDateString(), // e.g., 6/25/2025
-                    time: new Date().toLocaleTimeString(), // e.g., 10:32:15 AM
+                    date: new Date().toLocaleDateString(),
+                    time: new Date().toLocaleTimeString(),
                     sender: senderId,
                     receiver: receiverId,
                     senderName,
-                    read: false , // Initially unread
+                    read: false,
                     replyTo: replyMessage ? {
                         text: replyMessage.text,
                         senderName: replyMessage.senderName
                     } : null
+                });
+
+                // ✅ Update chat list for both users
+                const senderChatRef = ref(db, `users/${senderId}/chats/${receiverId}`);
+                const receiverChatRef = ref(db, `users/${receiverId}/chats/${senderId}`);
+
+                await update(senderChatRef, {
+                    lastMessage: message || "📷 Image",
+                    timestamp: Date.now()
+                });
+                await update(receiverChatRef, {
+                    lastMessage: message || "📷 Image",
+                    timestamp: Date.now()
                 });
 
                 setMessage('');
@@ -150,24 +161,22 @@ function Chat() {
             <NavChat onUserSelect={setSelectedChat} />
             <div className="chat-container" style={{ width: '70%', padding: '10px', display: 'flex', flexDirection: 'column' }}>
                 <div className="chat-header" style={{ padding: '10px', borderBottom: '1px solid #ccc', fontFamily: "Poppins" }}>
-                {selectedChat ? (
-                        <h3 
-                            style={{ cursor: "pointer" }} 
-                            onClick={() => navigate(`/profile/${selectedChat.uid}`)}
-                        >
+                    {selectedChat ? (
+                        <h3 style={{ cursor: "pointer" }} onClick={() => navigate(`/profile/${selectedChat.uid}`)}>
                             Chatting with {selectedChat.username}
                         </h3>
                     ) : (
                         <h3>Select a chat to start messaging</h3>
                     )}
                 </div>
+
                 <div className="messages" style={{ flex: 1, overflowY: 'scroll', padding: '10px' }}>
                     {messages.map((msg, index) => (
                         <div key={index} style={{ padding: '5px', borderBottom: '1px solid #ccc', fontFamily: "Poppins" }}>
-                            <strong>{msg.senderName}</strong>: 
+                            <strong>{msg.senderName}</strong>:
                             {msg.replyTo && (
                                 <div style={{ background: '#e0e0e0', padding: '5px', borderRadius: '5px', marginBottom: '3px', fontSize: '0.9em' }}>
-                                    <strong>Replying to {msg.replyTo.senderName}:</strong> <p style={{ whiteSpace: 'pre-wrap' }}>{msg.replyTo.text}</p>
+                                    <strong>Replying to {msg.replyTo.senderName}:</strong> <p>{msg.replyTo.text}</p>
                                 </div>
                             )}
                             {msg.text && <p style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</p>}
@@ -176,23 +185,26 @@ function Chat() {
                                 {msg.date || new Date(msg.timestamp).toLocaleDateString()}{" "}
                                 {msg.time || new Date(msg.timestamp).toLocaleTimeString()}
                             </span>
-                            {msg.read && <span style={{ color: 'green', fontSize: '0.8em', marginLeft: '5px' ,marginRight:'5px'}}>✔ Read</span>}
-                            {msg.text && <BsLightningCharge onClick={() => handleSummarize(msg.text, msg.id)} style={{color:'blue',marginRight:'5px',marginLeft:'5px'}}/>}
-                            <BsReply onClick={() => handleReply(msg)}/>
+                            {msg.read && <span style={{ color: 'green', fontSize: '0.8em', marginLeft: '5px' }}>✔ Read</span>}
+                            {msg.text && <BsLightningCharge onClick={() => handleSummarize(msg.text, msg.id)} style={{ color: 'blue', marginLeft: '10px', cursor: 'pointer' }} />}
+                            <BsReply onClick={() => handleReply(msg)} style={{ marginLeft: '5px', cursor: 'pointer' }} />
                         </div>
                     ))}
                     <div ref={messagesEndRef} />
                 </div>
+
                 {replyMessage && (
                     <div style={{ background: '#f0f0f0', padding: '10px', borderRadius: '5px', marginBottom: '5px' }}>
                         <strong>Replying to:</strong> {replyMessage.text}
                     </div>
                 )}
+
                 {preview && (
                     <div style={{ textAlign: 'center', padding: '10px' }}>
                         <img src={preview} alt="Preview" style={{ maxWidth: '200px', borderRadius: '10px' }} />
                     </div>
                 )}
+
                 <div className="message-input" style={{ display: 'flex', padding: '10px', alignItems: 'center' }}>
                     <label htmlFor="imageUpload" style={{ marginRight: '10px', cursor: 'pointer' }}>
                         <FaCamera />
@@ -217,7 +229,6 @@ function Chat() {
                             }
                         }}
                     />
-
                     <button onClick={handleSendMessage} style={{ width: '50px', height: '50px', borderRadius: '50%' }}>
                         <IoSend />
                     </button>
